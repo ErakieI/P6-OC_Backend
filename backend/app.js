@@ -1,52 +1,50 @@
 const express = require('express');
-const app = express();
+const fs = require('fs');
 const mongoose = require('mongoose');
+const path = require('path');
+const bookRoutes = require('./routes/books');
+const userRoutes = require('./routes/user');
 const Book = require('./models/book');
 
-mongoose.connect('mongodb+srv://toto:totomdp@cluster0.ihzxaoz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
-  { useNewUrlParser: true,
-    useUnifiedTopology: true })
-  .then(() => console.log('Connexion à MongoDB réussie !'))
-  .catch(() => console.log('Connexion à MongoDB échouée !'));
+const app = express();
 
-  // CORS
+// Lecture du contenu de data.json
+const rawData = fs.readFileSync('../frontend/public/data/data.json');
+const jsonData = JSON.parse(rawData);
+
+// Connexion à MongoDB
+mongoose.connect('mongodb+srv://toto:totomdp@cluster0.ihzxaoz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(async () => {
+  console.log('Connexion à MongoDB réussie !');
+  // Insérer les livres dans MongoDB
+  await Book.insertMany(jsonData);
+  console.log('Livres insérés avec succès dans MongoDB !');
+})
+.catch((error) => console.error('Connexion à MongoDB échouée :', error));
+
+// Middleware CORS
 app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    next();
-  });
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  next();
+});
 
-  // Middleware Post
-  app.post('/api/stuff', (req, res, next) => {
-    delete req.body._id;
-    const book = new Book({
-      ...req.body
-    });
-    book.save()
-      .then(() => res.status(201).json({ message: 'Livre enregistré !'}))
-      .catch(error => res.status(400).json({ error }));
-  });
+// Body parser pour les requêtes JSON
+app.use(express.json());
 
-  // Middleware Put /id
-  app.put('/api/stuff/:id', (req, res, next) => {
-    Book.updateOne({ _id: req.params.id }, { ...req.body, _id: req.params.id })
-      .then(() => res.status(200).json({ message: 'Livre modifié !'}))
-      .catch(error => res.status(400).json({ error }));
-  });
+// Routes
+app.use('/images', express.static(path.join(__dirname, 'images')));
+app.use('/api/books', bookRoutes);
+app.use('/api/auth', userRoutes);
 
-  // Middleware Get /id
-  app.get('/api/stuff/:id', (req, res, next) => {
-    Book.findOne({ _id: req.params.id })
-      .then(book => res.status(200).json(book))
-      .catch(error => res.status(404).json({ error }));
-  });
-  
-  // Middleware Get general
-  app.get('/api/stuff', (req, res, next) => {
-    Book.find()
-      .then(books => res.status(200).json(books))
-      .catch(error => res.status(400).json({ error }));
-  });
+// Gestion des erreurs
+app.use((err, req, res, next) => {
+  console.error('Erreur serveur :', err);
+  res.status(500).json({ error: err.message || 'Erreur serveur' });
+});
 
 module.exports = app;
