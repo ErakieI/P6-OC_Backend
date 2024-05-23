@@ -70,34 +70,49 @@ exports.getAllBooks = (req, res, next) => {
 };
 
 exports.addRating = (req, res, next) => {
-    const { userId, grade } = req.body;
 
-    if (!userId || !grade) {
-        return res.status(400).json({ error: 'userId ou note manquante' });
+    const {rating} = req.body;
+    if (!req.auth.userId || !rating) {
+        return res.status(400).json({error: 'userId ou note manquante'});
+    }
+    if (typeof rating !== 'number' || rating < 0 || rating > 5) {
+        return res.status(400).json({ error: 'La note doit être un nombre entre 0 et 5' });
     }
 
-    Book.findOne({ _id: req.params.id })
+    Book.findOne({_id: req.params.id})
         .then(book => {
             if (!book) {
-                return res.status(404).json({ error: 'Book introuvable' });
+                return res.status(404).json({error: 'Book introuvable'});
+            }
+            else if(book.ratings.find(rating => rating.userId === req.auth.userId)) {
+                return res.status(400).json({error: 'Vous avez déjà noté ce livre'});
             }
 
-            const rating = {
-                userId: mongoose.Types.ObjectId(userId),
-                grade: grade
+            const ratingScore = {
+                userId: req.auth.userId,
+                grade: rating,
             };
-            console.log(rating);
-            book.ratings.push(rating);
+
+            book.ratings.push(ratingScore);
 
             const totalRatings = book.ratings.length;
             const totalGrades = book.ratings.reduce((acc, rating) => acc + rating.grade, 0);
-            book.averageRating = totalGrades / totalRatings;
-            console.log(totalRatings);
-            console.log(totalGrades);
+            book.averageRating = parseFloat((totalGrades / totalRatings).toFixed(1));
 
             book.save()
-                .then(() => res.status(200).json({ message: 'Note ajoutée avec succès', book }))
-                .catch(error => res.status(400).json({ error }));
+                .then(() => res.status(200).json(book))
+                .catch(error => res.status(400).json({error}));
         })
-        .catch(error => res.status(500).json({ error }));
+        .catch(error => res.status(500).json({error}));
+};
+
+
+exports.bestRating = (req, res, next) => {
+    Book.find()
+        .then(books => {
+            const sortedBooks = books.sort((a, b) => b.averageRating - a.averageRating);
+            const topThreeBooks = sortedBooks.slice(0, 3);
+            res.status(200).json(topThreeBooks);
+        })
+        .catch(error => res.status(400).json({ error }));
 };
