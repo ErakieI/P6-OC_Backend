@@ -67,4 +67,37 @@ exports.getAllBooks = (req, res, next) => {
     Book.find()
       .then(books => res.status(200).json(books))
       .catch(error => res.status(400).json({ error }));
-  };
+};
+
+exports.addRating = (req, res, next) => {
+    const { userId, grade } = req.body;
+
+    if (!userId || !grade) {
+        return res.status(400).json({ error: 'userId ou note manquante' });
+    }
+
+    Book.findOne({ _id: req.params.id })
+        .then(book => {
+            if (!book) {
+                return res.status(404).json({ error: 'Book introuvable' });
+            }
+
+            const rating = {
+                userId: mongoose.Types.ObjectId(userId),
+                grade: grade
+            };
+            console.log(rating);
+            book.ratings.push(rating);
+
+            const totalRatings = book.ratings.length;
+            const totalGrades = book.ratings.reduce((acc, rating) => acc + rating.grade, 0);
+            book.averageRating = totalGrades / totalRatings;
+            console.log(totalRatings);
+            console.log(totalGrades);
+
+            book.save()
+                .then(() => res.status(200).json({ message: 'Note ajoutée avec succès', book }))
+                .catch(error => res.status(400).json({ error }));
+        })
+        .catch(error => res.status(500).json({ error }));
+};

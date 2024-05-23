@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const path = require('path');
+const cors = require('cors');
 const bookRoutes = require('./routes/books');
 const userRoutes = require('./routes/user');
 const Book = require('./models/book');
@@ -17,13 +18,30 @@ mongoose.connect('mongodb+srv://toto:totomdp@cluster0.ihzxaoz.mongodb.net/?retry
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(async () => {
-  console.log('Connexion à MongoDB réussie !');
-  // Insérer les livres dans MongoDB
-  await Book.insertMany(jsonData);
-  console.log('Livres insérés avec succès dans MongoDB !');
-})
+// .then(() => {
+//   Book.deleteMany({}, function(err) {
+//     if (err) {
+//       console.error(err);
+//     } else {
+//       console.log('Base de données vidée avec succès !');
+//     }})
+// })
+// .then(async () => {
+//   console.log('Connexion à MongoDB réussie !');
+//   // Insérer les livres dans MongoDB
+//   await Book.insertMany(jsonData);
+//   console.log('Livres insérés avec succès dans MongoDB !');
+// })
 .catch((error) => console.error('Connexion à MongoDB échouée :', error));
+
+// Configuration CORS localhost
+const corsOptions = {
+  origin: 'http://localhost:3000',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization'
+};
+
+app.use(cors(corsOptions));
 
 // Middleware CORS
 app.use((req, res, next) => {
