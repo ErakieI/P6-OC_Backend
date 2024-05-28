@@ -1,9 +1,19 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
+const passwordValidator = require('../models/passwordValidator');
+const emailValidator = require('email-validator');
 
 exports.signup = (req, res, next) => {
   console.log('Tentative de création d\'utilisateur:', req.body.email);
+  if (!emailValidator.validate(req.body.email)) {
+    return res.status(400).json({ error: 'Email invalide' });
+  }
+  const validationErrors = passwordValidator.validate(req.body.password, { list: true });
+  if (validationErrors.length > 0) {
+    console.error('Erreur de validation du mot de passe:', validationErrors);
+    return res.status(400).json({ error: `Le mot de passe n'est pas valide: ${validationErrors.join(', ')}` });
+  }
   bcrypt
     .hash(req.body.password, 10)
     .then((hash) => {
@@ -15,13 +25,9 @@ exports.signup = (req, res, next) => {
     })
     .then(() => res.status(201).json({ message: 'Utilisateur créé !' }))
     .catch((error) => {
-      console.error('Erreur lors de la création de l_utilisateur:', error);
+      console.error('Erreur lors de la création de l\'utilisateur:', error);
       res.status(400).json({ error });
     })
-    .catch((error) => {
-      console.error('Erreur lors du hashage du mot de passe:', error);
-      res.status(500).json({ error });
-    });
 };
 
 
