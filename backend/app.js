@@ -3,11 +3,12 @@ const mongoose = require('mongoose');
 const path = require('path');
 const bookRoutes = require('./routes/books');
 const userRoutes = require('./routes/user');
+require('dotenv').config()
 
 const app = express();
 
 // Connexion à MongoDB
-mongoose.connect('mongodb+srv://toto:totomdp@cluster0.ihzxaoz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+mongoose.connect(process.env.USER_MONGODB, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
